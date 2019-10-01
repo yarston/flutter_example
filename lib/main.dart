@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_list_test/AppState.dart';
+import 'package:flutter_list_test/actions/LikeAction.dart';
 import 'package:flutter_list_test/actions/LoadImageListAction.dart';
 import 'package:flutter_list_test/actions/LoadImageListSuccessAction.dart';
 import 'package:flutter_list_test/actions/ViewImageAction.dart';
@@ -82,10 +84,15 @@ UnsplashState viewImage(UnsplashState state, ViewImageAction action) {
   return state.copyWith(i: action.image, uuid: new Uuid().v1());
 }
 
+UnsplashState likeImage(UnsplashState state, LikeAction action) {
+  return state.copyWith(i: action.image, uuid: new Uuid().v1());
+}
+
 final Reducer<UnsplashState> mainReducer = combineReducers<UnsplashState>([
   new TypedReducer<UnsplashState, LoadImageListSuccessAction>(loadImageListSuccess),
   new TypedReducer<UnsplashState, LoadImageListAction>(loadImageList),
-  new TypedReducer<UnsplashState, ViewImageAction>(viewImage)
+  new TypedReducer<UnsplashState, ViewImageAction>(viewImage),
+  new TypedReducer<UnsplashState, LikeAction>(likeImage)
 ]);
 
 class MyApp extends StatelessWidget {
@@ -145,31 +152,41 @@ class UnsplashCardsListState extends State<UnsplashImageView> {
   // #enddocregion _buildSuggestions
 
   // #docregion _buildRow
-  Widget _buildRow(UnsplashImage blabla) {
+  Widget _buildRow(UnsplashImage item) {
     return Center(
       child: Card(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Image.network((blabla.urls == null || blabla.urls.regular == null) ? 'https://flutter.github.io/assets-for-api-docs/assets/widgets/owl-2.jpg' : blabla.urls.regular),
-            ListTile(
-              //leading: Icon(Icons.album),
-              title: Text((blabla.user != null && blabla.user.username != null ) ? blabla.user.username : 'unknow user'),
-              subtitle: Text(blabla.description != null ? blabla.description :
-              (blabla.alt_description != null ? blabla.alt_description :
-              'no any description')),
-            ),
-            ButtonTheme.bar( // make buttons use the appropriate styles for cards
-              child: ButtonBar(
-                children: <Widget>[
-                  FlatButton(
-                    child: const Text('LIKE'),
-                    onPressed: () { /* ... */ },
-                  ),
-                ],
+        child: new InkWell(
+          onTap: () => showItem(context, item),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Image.network((item.urls == null || item.urls.regular == null)
+                  ? 'https://flutter.github.io/assets-for-api-docs/assets/widgets/owl-2.jpg'
+                  : item.urls.regular),
+              ListTile(
+                //leading: Icon(Icons.album),
+                title: Text(
+                    (item.user != null && item.user.username != null)
+                        ? item.user.username
+                        : 'unknow user'),
+                subtitle: Text(item.description != null ? item.description :
+                (item.alt_description != null ? item.alt_description :
+                'no any description')),
               ),
-            ),
-          ],
+              ButtonTheme.bar( // make buttons use the appropriate styles for cards
+                child: ButtonBar(
+                  children: <Widget>[
+                    FlatButton(
+                      child: const Text('LIKE'),
+                      onPressed: () {
+                        /* ... */
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -226,4 +243,41 @@ class UnsplashCardsListState extends State<UnsplashImageView> {
       ),
     );
   }
+}
+
+void showItem(BuildContext context, UnsplashImage item) {
+  Navigator.push(
+    context,
+    new MaterialPageRoute<Null>(
+      builder: (BuildContext context) {
+        return new Scaffold(
+          resizeToAvoidBottomPadding: false,
+          body: new GestureDetector(
+            key: new Key(item.urls.regular),
+            onTap: () => Navigator.pop(context),
+            child: new SizedBox.expand(
+              //  child: new Hero(
+              //  tag: item.urls.regular,
+              child: Stack(
+                  alignment: Alignment.center,
+                  children: <Widget>[
+                    Image.network(
+                      item.urls.regular,
+                      width: MediaQuery.of(context).size.width,
+                      height: 300.0,
+                    ),
+                    Align(
+                        alignment: Alignment(0.8, 0.9),
+                        child: FloatingActionButton(
+                          onPressed: () {},
+                          child: new Icon(Icons.favorite),
+                        )
+                    )
+                  ]),
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }
