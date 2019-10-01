@@ -14,6 +14,7 @@ class UnsplashImage {
   final int height;
   final UnsplashImageUrls urls;
   final User user;
+  bool isLiked;
 
   UnsplashImage(this.id, this.description, this.alt_description, this.color, this.width, this.height, this.urls, this.user);
   factory UnsplashImage.fromJson(Map<String, dynamic> json) => _$UnsplashImageFromJson(json);
