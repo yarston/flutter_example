@@ -19,7 +19,8 @@ UnsplashImage _$UnsplashImageFromJson(Map<String, dynamic> json) {
           : UnsplashImageUrls.fromJson(json['urls'] as Map<String, dynamic>),
       json['user'] == null
           ? null
-          : User.fromJson(json['user'] as Map<String, dynamic>));
+          : User.fromJson(json['user'] as Map<String, dynamic>),
+      json['liked_by_user'] as bool);
 }
 
 Map<String, dynamic> _$UnsplashImageToJson(UnsplashImage instance) =>
@@ -31,5 +32,6 @@ Map<String, dynamic> _$UnsplashImageToJson(UnsplashImage instance) =>
       'width': instance.width,
       'height': instance.height,
       'urls': instance.urls,
-      'user': instance.user
+      'user': instance.user,
+      'liked_by_user': instance.liked_by_user
     };

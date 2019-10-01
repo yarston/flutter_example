@@ -5,7 +5,6 @@ import 'package:flutter_list_test/AppState.dart';
 import 'package:flutter_list_test/actions/LikeAction.dart';
 import 'package:flutter_list_test/actions/LoadImageListAction.dart';
 import 'package:flutter_list_test/actions/LoadImageListSuccessAction.dart';
-import 'package:flutter_list_test/actions/ViewImageAction.dart';
 import 'package:flutter_list_test/data/ReduxViewModel.dart';
 import 'package:flutter_list_test/data/UnsplashImage.dart';
 import 'package:flutter_list_test/data/UnsplashState.dart';
@@ -39,12 +38,12 @@ Middleware<AppState> _createLoadmagesRequest() {
   return (Store<AppState> store, action, NextDispatcher next) async {
     // Propagate the action first for show loading indicator ( global and pagination )
     next(action);
-    var raw = await http.get('https://api.unsplash.com/photos/?client_id=$clientId&page=${store.state.unsplashState.page}');
-    if (raw.statusCode == 200) {
+    var response = await http.get('https://api.unsplash.com/photos/?client_id=$clientId&page=${store.state.unsplashState.page}');
+    if (response.statusCode == 200) {
       // dispatch success loading  ( first load and pagination load )
       store.dispatch(
         new LoadImageListSuccessAction(
-          image: (json.decode(raw.body) as List).map<UnsplashImage>((i) => UnsplashImage.fromJson(i)).toList(),
+          image: (json.decode(response.body) as List).map<UnsplashImage>((i) => UnsplashImage.fromJson(i)).toList(),
           paginate: action.paginate,
         ),
       );
@@ -80,18 +79,14 @@ UnsplashState loadImageListSuccess(UnsplashState state, LoadImageListSuccessActi
   );
 }
 
-UnsplashState viewImage(UnsplashState state, ViewImageAction action) {
-  return state.copyWith(i: action.image, uuid: new Uuid().v1());
-}
-
 UnsplashState likeImage(UnsplashState state, LikeAction action) {
-  return state.copyWith(i: action.image, uuid: new Uuid().v1());
+  String likedId = action.image.id;
+  return state.copyWith(i: state.images.map((e) => e.id == likedId ? e.copyWith(!e.liked_by_user) : e).toList(), uuid: new Uuid().v1());
 }
 
 final Reducer<UnsplashState> mainReducer = combineReducers<UnsplashState>([
   new TypedReducer<UnsplashState, LoadImageListSuccessAction>(loadImageListSuccess),
   new TypedReducer<UnsplashState, LoadImageListAction>(loadImageList),
-  new TypedReducer<UnsplashState, ViewImageAction>(viewImage),
   new TypedReducer<UnsplashState, LikeAction>(likeImage)
 ]);
 
@@ -149,9 +144,6 @@ class UnsplashCardsListState extends State<UnsplashImageView> {
           return _buildRow(dataList[i]);
         });
   }
-  // #enddocregion _buildSuggestions
-
-  // #docregion _buildRow
   Widget _buildRow(UnsplashImage item) {
     return Center(
       child: Card(
@@ -177,9 +169,9 @@ class UnsplashCardsListState extends State<UnsplashImageView> {
                 child: ButtonBar(
                   children: <Widget>[
                     FlatButton(
-                      child: const Text('LIKE'),
+                      child: Text(item.liked_by_user ? 'DISLIKE' : 'LIKE'),
                       onPressed: () {
-                        /* ... */
+                        StoreProvider.of<AppState>(context).dispatch(LikeAction(image: item));
                       },
                     ),
                   ],
@@ -201,8 +193,7 @@ class UnsplashCardsListState extends State<UnsplashImageView> {
       body: StoreConnector<AppState, ReduxViewModel>(
         distinct: true,
         converter: (store) => ReduxViewModel.fromStore(store),
-        onInit: (store) =>
-            store.dispatch(new LoadImageListAction(paginate: false)),
+        onInit: (store) => store.dispatch(new LoadImageListAction(paginate: false)),
         builder: (_, vm) {
           // global and first loading indicator
           if (vm.state.loading) {
@@ -245,38 +236,65 @@ class UnsplashCardsListState extends State<UnsplashImageView> {
   }
 }
 
+class FullScreenView extends StatefulWidget {
+  final UnsplashImage item;
+  FullScreenView(this.item);
+  @override
+  _FullScreenViewState createState() => _FullScreenViewState(item);
+}
+
+class _FullScreenViewState extends State<FullScreenView> {
+  final UnsplashImage item;
+  bool isLiked = false;
+
+  _FullScreenViewState(this.item);
+
+  @override
+  void initState() {
+    isLiked = item.liked_by_user;
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      resizeToAvoidBottomPadding: false,
+      body: new GestureDetector(
+        key: new Key(item.urls.regular),
+        onTap: () => Navigator.pop(context),
+        child: Stack(
+            alignment: Alignment.center,
+            children: <Widget>[
+              Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                      image: NetworkImage(item.urls.regular),
+                      fit: BoxFit.cover
+                  ),
+                ),
+              ),
+              Align(
+                  alignment: Alignment(0.8, 0.9),
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      StoreProvider.of<AppState>(context).dispatch(LikeAction(image: item));
+                      setState(() => isLiked = !isLiked);
+                    },
+                    child: Icon(isLiked ? Icons.favorite : Icons.favorite_border),
+                  )
+              )
+            ]),
+      ),
+    );
+  }
+}
+
 void showItem(BuildContext context, UnsplashImage item) {
   Navigator.push(
     context,
     new MaterialPageRoute<Null>(
       builder: (BuildContext context) {
-        return new Scaffold(
-          resizeToAvoidBottomPadding: false,
-          body: new GestureDetector(
-            key: new Key(item.urls.regular),
-            onTap: () => Navigator.pop(context),
-            child: new SizedBox.expand(
-              //  child: new Hero(
-              //  tag: item.urls.regular,
-              child: Stack(
-                  alignment: Alignment.center,
-                  children: <Widget>[
-                    Image.network(
-                      item.urls.regular,
-                      width: MediaQuery.of(context).size.width,
-                      height: 300.0,
-                    ),
-                    Align(
-                        alignment: Alignment(0.8, 0.9),
-                        child: FloatingActionButton(
-                          onPressed: () {},
-                          child: new Icon(Icons.favorite),
-                        )
-                    )
-                  ]),
-            ),
-          ),
-        );
+        return new FullScreenView(item);
       },
     ),
   );
