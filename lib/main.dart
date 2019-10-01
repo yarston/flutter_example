@@ -81,7 +81,7 @@ UnsplashState loadImageListSuccess(UnsplashState state, LoadImageListSuccessActi
 
 UnsplashState likeImage(UnsplashState state, LikeAction action) {
   String likedId = action.image.id;
-  return state.copyWith(i: state.images.map((e) => e.id == likedId ? e.copyWith(!e.liked_by_user) : e).toList(), uuid: new Uuid().v1());
+  return state.copyWith(i: state.images.map((e) => e.id == likedId ? e.copyWith(liked: !e.liked_by_user) : e).toList(), uuid: new Uuid().v1());
 }
 
 final Reducer<UnsplashState> mainReducer = combineReducers<UnsplashState>([
@@ -147,6 +147,9 @@ class UnsplashCardsListState extends State<UnsplashImageView> {
   Widget _buildRow(UnsplashImage item) {
     return Center(
       child: Card(
+        clipBehavior: Clip.antiAliasWithSaveLayer,
+        elevation: 5,
+        margin: EdgeInsets.all(10),
         child: new InkWell(
           onTap: () => showItem(context, item),
           child: Column(

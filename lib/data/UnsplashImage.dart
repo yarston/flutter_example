@@ -19,7 +19,7 @@ class UnsplashImage {
   UnsplashImage(this.id, this.description, this.alt_description, this.color, this.width, this.height, this.urls, this.user, this.liked_by_user);
   factory UnsplashImage.fromJson(Map<String, dynamic> json) => _$UnsplashImageFromJson(json);
 
-  UnsplashImage copyWith(bool liked) => new UnsplashImage(
+  UnsplashImage copyWith({liked}) => new UnsplashImage(
       this.id,
       this.description,
       this.alt_description,
@@ -28,5 +28,5 @@ class UnsplashImage {
       this.height,
       this.urls,
       this.user,
-      liked);
+      liked ?? this.liked_by_user);
 }
